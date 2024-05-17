@@ -1,6 +1,2 @@
 # .gitignore
-node_modules/
-dist/
-
-# Agrega esta línea
 .idea/
