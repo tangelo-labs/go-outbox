@@ -1,4 +1,4 @@
-package outbox_test
+package mysql_test
 
 import (
 	"context"
@@ -7,9 +7,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/DATA-DOG/go-sqlmock"
 	"github.com/Tangelogames/appocalypse/pkg/outbox"
-	"github.com/brianvoe/gofakeit/v6"
 	"github.com/stretchr/testify/require"
 )
 

@@ -1,4 +1,4 @@
-package outbox_test
+package gorm_test
 
 import (
 	"context"
@@ -8,14 +8,13 @@ import (
 	"testing"
 	"time"
 
-	"github.com/Tangelogames/appocalypse/pkg/outbox"
 	"github.com/Tangelogames/appocalypse/pkg/transport/events/causation"
 	"github.com/Tangelogames/appocalypse/pkg/transport/events/correlation"
 	"github.com/brianvoe/gofakeit/v6"
 	"github.com/stretchr/testify/require"
 	"github.com/tangelo-labs/go-domain"
 	"github.com/tangelo-labs/go-domain/events"
-	"github.com/tangelo-labs/go-dotenv"
+	"github.com/tangelo-labs/outbox"
 	"gorm.io/datatypes"
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"

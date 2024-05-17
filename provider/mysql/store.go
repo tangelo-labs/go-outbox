@@ -1,4 +1,4 @@
-package outbox
+package mysql
 
 import (
 	"context"
@@ -8,19 +8,20 @@ import (
 	"time"
 
 	"github.com/jmoiron/sqlx"
+	"github.com/tangelo-labs/outbox"
 )
 
 type mysqlStore struct {
 	tableName     string
-	onDispatchErr func(Event, error)
+	onDispatchErr func(outbox.Event, error)
 	db            *sql.DB
 }
 
 // NewMySQLStore builds event store that uses MySQL to access the outbox table.
-func NewMySQLStore(db *sql.DB, tableName string) EventStore {
+func NewMySQLStore(db *sql.DB, tableName string) outbox.EventStore {
 	return &mysqlStore{
 		tableName: tableName,
-		onDispatchErr: func(event Event, err error) {
+		onDispatchErr: func(event outbox.Event, err error) {
 			// TODO: remove this and make it configurable
 			fmt.Printf("error dispatching event %#v: %s\n", event, err.Error())
 		},
@@ -28,7 +29,7 @@ func NewMySQLStore(db *sql.DB, tableName string) EventStore {
 	}
 }
 
-func (g *mysqlStore) SaveTx(ctx context.Context, tx *sql.Tx, event Event) error {
+func (g *mysqlStore) SaveTx(ctx context.Context, tx *sql.Tx, event outbox.Event) error {
 	metaJSON, mErr := json.Marshal(event.Metadata)
 	if mErr != nil {
 		return mErr
@@ -47,7 +48,7 @@ func (g *mysqlStore) SaveTx(ctx context.Context, tx *sql.Tx, event Event) error 
 	return err
 }
 
-func (g *mysqlStore) SaveAllTx(ctx context.Context, tx *sql.Tx, events ...Event) error {
+func (g *mysqlStore) SaveAllTx(ctx context.Context, tx *sql.Tx, events ...outbox.Event) error {
 	stmt, pErr := tx.PrepareContext(ctx,
 		fmt.Sprintf("INSERT INTO `%s` (id, event_name, payload, metadata, created_at) VALUES (?, ?, ?, ?, ?)", g.tableName),
 	)
@@ -83,7 +84,7 @@ func (g *mysqlStore) Purge(ctx context.Context, olderTan time.Duration) (int64, 
 	return res.RowsAffected()
 }
 
-func (g *mysqlStore) DispatchPendingTx(ctx context.Context, batchSize uint16, fn DispatchFunc) error {
+func (g *mysqlStore) DispatchPendingTx(ctx context.Context, batchSize uint16, fn outbox.DispatchFunc) error {
 	tx, err := g.db.BeginTx(ctx, &sql.TxOptions{Isolation: sql.LevelSerializable})
 	if err != nil {
 		return fmt.Errorf("%w: failed to start transaction", err)
@@ -102,11 +103,11 @@ func (g *mysqlStore) DispatchPendingTx(ctx context.Context, batchSize uint16, fn
 		return fmt.Errorf("%w: failed to query for pending events", err)
 	}
 
-	forDispatch := make([]Event, 0)
+	forDispatch := make([]outbox.Event, 0)
 	var eventIDs []string
 
 	for rows.Next() {
-		var event Event
+		var event outbox.Event
 		var metaJSON []byte
 
 		if sErr := rows.Scan(&event.ID, &event.Type, &event.Payload, &metaJSON); sErr != nil {

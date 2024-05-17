@@ -1,4 +1,4 @@
-package outbox_test
+package mysql_test
 
 import (
 	"context"
@@ -8,12 +8,12 @@ import (
 	"testing"
 	"time"
 
-	"github.com/Tangelogames/appocalypse/pkg/outbox"
 	"github.com/Tangelogames/appocalypse/pkg/transport/events/causation"
 	"github.com/brianvoe/gofakeit/v6"
 	"github.com/stretchr/testify/require"
 	"github.com/tangelo-labs/go-domain"
 	"github.com/tangelo-labs/go-domain/events"
+	"github.com/tangelo-labs/outbox"
 )
 
 func TestMysql(t *testing.T) {

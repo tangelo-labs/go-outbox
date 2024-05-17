@@ -1,13 +1,15 @@
-package outbox
+package memory
 
 import (
 	"context"
 	"database/sql"
 	"sync"
 	"time"
+
+	"github.com/tangelo-labs/outbox"
 )
 
-var _ EventStore = (*InMemoryStore)(nil)
+var _ outbox.EventStore = (*InMemoryStore)(nil)
 
 // InMemoryStore is an in-memory event store for testing purposes only.
 type InMemoryStore struct {
@@ -17,7 +19,7 @@ type InMemoryStore struct {
 }
 
 type inMemEvent struct {
-	inner        Event
+	inner        outbox.Event
 	createdAt    time.Time
 	dispatchedAt time.Time
 }
@@ -40,7 +42,7 @@ func (m *InMemoryStore) Size() int {
 }
 
 // SaveTx saves an event to the store.
-func (m *InMemoryStore) SaveTx(ctx context.Context, _ *sql.Tx, event Event) error {
+func (m *InMemoryStore) SaveTx(ctx context.Context, _ *sql.Tx, event outbox.Event) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
@@ -59,7 +61,7 @@ func (m *InMemoryStore) SaveTx(ctx context.Context, _ *sql.Tx, event Event) erro
 }
 
 // SaveAllTx saves multiple events to the store.
-func (m *InMemoryStore) SaveAllTx(ctx context.Context, _ *sql.Tx, events ...Event) error {
+func (m *InMemoryStore) SaveAllTx(ctx context.Context, _ *sql.Tx, events ...outbox.Event) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
@@ -97,7 +99,7 @@ func (m *InMemoryStore) Purge(_ context.Context, olderTan time.Duration) (int64,
 }
 
 // DispatchPendingTx dispatches pending events.
-func (m *InMemoryStore) DispatchPendingTx(ctx context.Context, batchSize uint16, fn DispatchFunc) error {
+func (m *InMemoryStore) DispatchPendingTx(ctx context.Context, batchSize uint16, fn outbox.DispatchFunc) error {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 
