@@ -1,4 +1,4 @@
-package gorm_test
+package mysql_test
 
 import (
 	"context"
@@ -8,15 +8,17 @@ import (
 	"testing"
 	"time"
 
-	"github.com/Tangelogames/appocalypse/pkg/transport/events/causation"
-	"github.com/Tangelogames/appocalypse/pkg/transport/events/correlation"
 	"github.com/brianvoe/gofakeit/v6"
 	"github.com/stretchr/testify/require"
 	"github.com/tangelo-labs/go-domain"
 	"github.com/tangelo-labs/go-domain/events"
-	"github.com/tangelo-labs/outbox"
+	"github.com/tangelo-labs/go-dotenv"
+	"github.com/tangelo-labs/go-outbox"
+	"github.com/tangelo-labs/go-outbox/pkg/transport/events/causation"
+	"github.com/tangelo-labs/go-outbox/pkg/transport/events/correlation"
+	"github.com/tangelo-labs/go-outbox/provider/mysql"
 	"gorm.io/datatypes"
-	"gorm.io/driver/mysql"
+	mysqlg "gorm.io/driver/mysql"
 	"gorm.io/gorm"
 )
 
@@ -40,7 +42,7 @@ func TestGorm(t *testing.T) {
 
 		repo := &ordersGormRepo{
 			db:        gormDB,
-			outbox:    outbox.NewMySQLStore(sqlDB, outboxTableName),
+			outbox:    mysql.NewStore(sqlDB, outboxTableName),
 			tableName: orderTableName,
 		}
 
@@ -157,7 +159,7 @@ func setup(t *testing.T, outboxTableName, orderTableName string) *gorm.DB {
 	envVars := environment{}
 	require.NoError(t, dotenv.LoadAndParse(&envVars))
 
-	gormDB, err := gorm.Open(mysql.Open(envVars.DatabaseDSN))
+	gormDB, err := gorm.Open(mysqlg.Open(envVars.DatabaseDSN))
 	require.NoError(t, err)
 
 	require.NoError(t, gormDB.Migrator().DropTable(&mysqlEvent{}))

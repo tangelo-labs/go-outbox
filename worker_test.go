@@ -6,9 +6,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/Tangelogames/appocalypse/pkg/outbox"
 	"github.com/brianvoe/gofakeit/v6"
 	"github.com/stretchr/testify/require"
+	"github.com/tangelo-labs/go-outbox"
+	"github.com/tangelo-labs/go-outbox/provider/memory"
 )
 
 func TestWorker_Start(t *testing.T) {
@@ -43,7 +44,7 @@ func TestWorker_Start(t *testing.T) {
 			},
 		}
 
-		store := &storeSpy{InMemoryStore: outbox.NewMemoryStore()}
+		store := &storeSpy{Store: memory.NewStore()}
 		sErr := store.SaveAllTx(ctx, nil, events...)
 
 		require.NoError(t, sErr)
@@ -107,7 +108,7 @@ func (q *queue) ids() []string {
 }
 
 type storeSpy struct {
-	*outbox.InMemoryStore
+	*memory.Store
 
 	purgeCalls             int
 	dispatchPendingTxCalls int
@@ -134,7 +135,7 @@ func (s *storeSpy) DispatchPendingTx(ctx context.Context, batchSize uint16, fn o
 
 	s.dispatchPendingTxCalls++
 
-	return s.InMemoryStore.DispatchPendingTx(ctx, batchSize, fn)
+	return s.Store.DispatchPendingTx(ctx, batchSize, fn)
 }
 
 func (s *storeSpy) Purge(ctx context.Context, olderTan time.Duration) (int64, error) {
@@ -143,5 +144,5 @@ func (s *storeSpy) Purge(ctx context.Context, olderTan time.Duration) (int64, er
 
 	s.purgeCalls++
 
-	return s.InMemoryStore.Purge(ctx, olderTan)
+	return s.Store.Purge(ctx, olderTan)
 }

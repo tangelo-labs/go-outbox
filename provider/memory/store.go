@@ -6,13 +6,13 @@ import (
 	"sync"
 	"time"
 
-	"github.com/tangelo-labs/outbox"
+	"github.com/tangelo-labs/go-outbox"
 )
 
-var _ outbox.EventStore = (*InMemoryStore)(nil)
+var _ outbox.EventStore = (*Store)(nil)
 
-// InMemoryStore is an in-memory event store for testing purposes only.
-type InMemoryStore struct {
+// Store is an in-memory event store for testing purposes only.
+type Store struct {
 	events map[string]*inMemEvent
 	mu     sync.RWMutex
 	tx     sync.Mutex
@@ -24,17 +24,17 @@ type inMemEvent struct {
 	dispatchedAt time.Time
 }
 
-// NewMemoryStore builds a new in-memory event store for testing purposes only,
+// NewStore builds a new in-memory event store for testing purposes only,
 // use with caution as SQL transaction handling is not supported which is the
 // whole purpose of the outbox pattern.
-func NewMemoryStore() *InMemoryStore {
-	return &InMemoryStore{
+func NewStore() *Store {
+	return &Store{
 		events: make(map[string]*inMemEvent),
 	}
 }
 
 // Size returns the number of events in the store.
-func (m *InMemoryStore) Size() int {
+func (m *Store) Size() int {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 
@@ -42,7 +42,7 @@ func (m *InMemoryStore) Size() int {
 }
 
 // SaveTx saves an event to the store.
-func (m *InMemoryStore) SaveTx(ctx context.Context, _ *sql.Tx, event outbox.Event) error {
+func (m *Store) SaveTx(ctx context.Context, _ *sql.Tx, event outbox.Event) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
@@ -61,7 +61,7 @@ func (m *InMemoryStore) SaveTx(ctx context.Context, _ *sql.Tx, event outbox.Even
 }
 
 // SaveAllTx saves multiple events to the store.
-func (m *InMemoryStore) SaveAllTx(ctx context.Context, _ *sql.Tx, events ...outbox.Event) error {
+func (m *Store) SaveAllTx(ctx context.Context, _ *sql.Tx, events ...outbox.Event) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
@@ -82,7 +82,7 @@ func (m *InMemoryStore) SaveAllTx(ctx context.Context, _ *sql.Tx, events ...outb
 }
 
 // Purge removes old dispatched events.
-func (m *InMemoryStore) Purge(_ context.Context, olderTan time.Duration) (int64, error) {
+func (m *Store) Purge(_ context.Context, olderTan time.Duration) (int64, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
@@ -99,7 +99,7 @@ func (m *InMemoryStore) Purge(_ context.Context, olderTan time.Duration) (int64,
 }
 
 // DispatchPendingTx dispatches pending events.
-func (m *InMemoryStore) DispatchPendingTx(ctx context.Context, batchSize uint16, fn outbox.DispatchFunc) error {
+func (m *Store) DispatchPendingTx(ctx context.Context, batchSize uint16, fn outbox.DispatchFunc) error {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 

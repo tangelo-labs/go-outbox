@@ -8,18 +8,18 @@ import (
 	"time"
 
 	"github.com/jmoiron/sqlx"
-	"github.com/tangelo-labs/outbox"
+	"github.com/tangelo-labs/go-outbox"
 )
 
-type mysqlStore struct {
+type store struct {
 	tableName     string
 	onDispatchErr func(outbox.Event, error)
 	db            *sql.DB
 }
 
-// NewMySQLStore builds event store that uses MySQL to access the outbox table.
-func NewMySQLStore(db *sql.DB, tableName string) outbox.EventStore {
-	return &mysqlStore{
+// NewStore builds event store that uses MySQL to access the outbox table.
+func NewStore(db *sql.DB, tableName string) outbox.EventStore {
+	return &store{
 		tableName: tableName,
 		onDispatchErr: func(event outbox.Event, err error) {
 			// TODO: remove this and make it configurable
@@ -29,7 +29,7 @@ func NewMySQLStore(db *sql.DB, tableName string) outbox.EventStore {
 	}
 }
 
-func (g *mysqlStore) SaveTx(ctx context.Context, tx *sql.Tx, event outbox.Event) error {
+func (g *store) SaveTx(ctx context.Context, tx *sql.Tx, event outbox.Event) error {
 	metaJSON, mErr := json.Marshal(event.Metadata)
 	if mErr != nil {
 		return mErr
@@ -48,7 +48,7 @@ func (g *mysqlStore) SaveTx(ctx context.Context, tx *sql.Tx, event outbox.Event)
 	return err
 }
 
-func (g *mysqlStore) SaveAllTx(ctx context.Context, tx *sql.Tx, events ...outbox.Event) error {
+func (g *store) SaveAllTx(ctx context.Context, tx *sql.Tx, events ...outbox.Event) error {
 	stmt, pErr := tx.PrepareContext(ctx,
 		fmt.Sprintf("INSERT INTO `%s` (id, event_name, payload, metadata, created_at) VALUES (?, ?, ?, ?, ?)", g.tableName),
 	)
@@ -71,7 +71,7 @@ func (g *mysqlStore) SaveAllTx(ctx context.Context, tx *sql.Tx, events ...outbox
 	return nil
 }
 
-func (g *mysqlStore) Purge(ctx context.Context, olderTan time.Duration) (int64, error) {
+func (g *store) Purge(ctx context.Context, olderTan time.Duration) (int64, error) {
 	res, err := g.db.ExecContext(ctx,
 		fmt.Sprintf("DELETE FROM `%s` WHERE dispatched_at IS NOT NULL AND dispatched_at < ?", g.tableName),
 		time.Now().Add(-olderTan),
@@ -84,7 +84,7 @@ func (g *mysqlStore) Purge(ctx context.Context, olderTan time.Duration) (int64, 
 	return res.RowsAffected()
 }
 
-func (g *mysqlStore) DispatchPendingTx(ctx context.Context, batchSize uint16, fn outbox.DispatchFunc) error {
+func (g *store) DispatchPendingTx(ctx context.Context, batchSize uint16, fn outbox.DispatchFunc) error {
 	tx, err := g.db.BeginTx(ctx, &sql.TxOptions{Isolation: sql.LevelSerializable})
 	if err != nil {
 		return fmt.Errorf("%w: failed to start transaction", err)

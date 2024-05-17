@@ -5,15 +5,17 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	"sync"
 	"testing"
 	"time"
 
-	"github.com/Tangelogames/appocalypse/pkg/transport/events/causation"
 	"github.com/brianvoe/gofakeit/v6"
 	"github.com/stretchr/testify/require"
 	"github.com/tangelo-labs/go-domain"
 	"github.com/tangelo-labs/go-domain/events"
-	"github.com/tangelo-labs/outbox"
+	"github.com/tangelo-labs/go-outbox"
+	"github.com/tangelo-labs/go-outbox/pkg/transport/events/causation"
+	"github.com/tangelo-labs/go-outbox/provider/mysql"
 )
 
 func TestMysql(t *testing.T) {
@@ -36,7 +38,7 @@ func TestMysql(t *testing.T) {
 
 		repo := &ordersRepo{
 			db:        sqlDB,
-			outbox:    outbox.NewMySQLStore(sqlDB, outboxTableName),
+			outbox:    mysql.NewStore(sqlDB, outboxTableName),
 			tableName: orderTableName,
 		}
 
@@ -147,4 +149,29 @@ func (r *ordersRepo) Create(ctx context.Context, order *order) error {
 	}
 
 	return tx.Commit()
+}
+
+type queue struct {
+	events []outbox.Event
+	mu     sync.Mutex
+}
+
+func (q *queue) add(event outbox.Event) {
+	q.mu.Lock()
+	defer q.mu.Unlock()
+
+	q.events = append(q.events, event)
+}
+
+func (q *queue) ids() []string {
+	q.mu.Lock()
+	defer q.mu.Unlock()
+
+	ids := make([]string, len(q.events))
+
+	for i, event := range q.events {
+		ids[i] = event.ID
+	}
+
+	return ids
 }

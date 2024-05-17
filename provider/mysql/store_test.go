@@ -7,8 +7,11 @@ import (
 	"testing"
 	"time"
 
-	"github.com/Tangelogames/appocalypse/pkg/outbox"
+	"github.com/DATA-DOG/go-sqlmock"
+	"github.com/brianvoe/gofakeit/v6"
 	"github.com/stretchr/testify/require"
+	"github.com/tangelo-labs/go-outbox"
+	"github.com/tangelo-labs/go-outbox/provider/mysql"
 )
 
 func TestMySQLSave(t *testing.T) {
@@ -18,7 +21,7 @@ func TestMySQLSave(t *testing.T) {
 	db, mock, err := sqlmock.New(sqlmock.QueryMatcherOption(sqlmock.QueryMatcherEqual))
 
 	require.NoError(t, err)
-	store := outbox.NewMySQLStore(db, "outbox")
+	store := mysql.NewStore(db, "outbox")
 
 	mock.ExpectBegin()
 	tx, bErr := db.Begin()
