@@ -12,21 +12,29 @@ import (
 )
 
 type store struct {
-	tableName     string
-	onDispatchErr func(outbox.Event, error)
-	db            *sql.DB
+	tableName      string
+	onDispatchErr  func(outbox.Event, error)
+	isolationLevel sql.IsolationLevel
+	db             *sql.DB
 }
 
 // NewStore builds event store that uses MySQL to access the outbox table.
-func NewStore(db *sql.DB, tableName string) outbox.EventStore {
-	return &store{
+func NewStore(db *sql.DB, tableName string, ops ...Option) outbox.EventStore {
+	s := &store{
 		tableName: tableName,
 		onDispatchErr: func(event outbox.Event, err error) {
 			// TODO: remove this and make it configurable
 			fmt.Printf("error dispatching event %#v: %s\n", event, err.Error())
 		},
-		db: db,
+		isolationLevel: sql.LevelSerializable,
+		db:             db,
 	}
+
+	for _, op := range ops {
+		op(s)
+	}
+
+	return s
 }
 
 func (g *store) SaveTx(ctx context.Context, tx *sql.Tx, event outbox.Event) error {
@@ -85,7 +93,7 @@ func (g *store) Purge(ctx context.Context, olderTan time.Duration) (int64, error
 }
 
 func (g *store) DispatchPendingTx(ctx context.Context, batchSize uint16, fn outbox.DispatchFunc) error {
-	tx, err := g.db.BeginTx(ctx, &sql.TxOptions{Isolation: sql.LevelSerializable})
+	tx, err := g.db.BeginTx(ctx, &sql.TxOptions{Isolation: g.isolationLevel})
 	if err != nil {
 		return fmt.Errorf("%w: failed to start transaction", err)
 	}
