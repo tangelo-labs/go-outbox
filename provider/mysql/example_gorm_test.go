@@ -2,7 +2,6 @@ package mysql_test
 
 import (
 	"context"
-	"database/sql"
 	"encoding/json"
 	"fmt"
 	"testing"
@@ -17,6 +16,7 @@ import (
 	"github.com/tangelo-labs/go-outbox/pkg/transport/events/causation"
 	"github.com/tangelo-labs/go-outbox/pkg/transport/events/correlation"
 	"github.com/tangelo-labs/go-outbox/provider/mysql"
+	"github.com/tangelo-labs/go-outbox/provider/mysql/gormutil"
 	"gorm.io/datatypes"
 	mysqlg "gorm.io/driver/mysql"
 	"gorm.io/gorm"
@@ -114,7 +114,14 @@ func (r *ordersGormRepo) Create(ctx context.Context, order *order) error {
 			return err
 		}
 
-		if sErr := r.outbox.SaveAllTx(ctx, tx.Statement.ConnPool.(*sql.Tx), events...); sErr != nil {
+		sqlTx, sErr := gormutil.ExtractSQLTx(tx)
+		if sErr != nil {
+			_ = tx.Rollback()
+
+			return sErr
+		}
+
+		if sErr := r.outbox.SaveAllTx(ctx, sqlTx, events...); sErr != nil {
 			_ = tx.Rollback()
 
 			return sErr
